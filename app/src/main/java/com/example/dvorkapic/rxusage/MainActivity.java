@@ -8,13 +8,17 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.example.dvorkapic.rxusage.Pojo.CurrentWeatherData;
+import com.google.gson.GsonBuilder;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 import rx.Observable;
 import rx.Observer;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.internal.util.RxThreadFactory;
 import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
@@ -41,7 +45,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     SwipeRefreshLayout srlRefresh;
 
     Observable<CurrentWeatherData> observable;
+//    Observable<String> observable;
     WeatherService weatherService;
+    Retrofit retrofit;
 
     private final String apiKey = "9330706858110721d507c1057cae7b61";
 
@@ -54,24 +60,23 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         srlRefresh.setOnRefreshListener(this);
 
-        Retrofit retrofit = new Retrofit.Builder()
+        retrofit = new Retrofit.Builder()
                 .baseUrl("http://api.openweathermap.org/data/2.5/")
+                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
 
         weatherService = retrofit.create(WeatherService.class);
-
-
-
-
     }
 
     @Override
     public void onRefresh() {
-        observable =  weatherService.getCurrentWeatherData(etCity.getText().toString(), apiKey);
-        observable.subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Observer<CurrentWeatherData>() {
+        observable =  weatherService.getCurrentWeatherData(etCity.getText().toString(), apiKey)
+                        .subscribeOn(Schedulers.newThread())
+                        .observeOn(AndroidSchedulers.mainThread());
+
+        observable.subscribe(new Observer<CurrentWeatherData>() {
                     @Override
                     public void onCompleted() {
 
@@ -79,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
                     @Override
                     public void onError(Throwable e) {
-
+                        showSnack(e.getMessage());
                     }
 
                     @Override
@@ -89,11 +94,13 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                         tvPRessure.setText(currentWeatherData.getMainInfo().getPressure().toString());
                         tvSunrise.setText(currentWeatherData.getSys().getSunrise());
                         tvSunset.setText(currentWeatherData.getSys().getSunset());
+                        srlRefresh.stopNestedScroll();
                     }
                 });
     }
 
     private void showSnack(String message) {
         Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG).show();
+        srlRefresh.stopNestedScroll();
     }
 }
