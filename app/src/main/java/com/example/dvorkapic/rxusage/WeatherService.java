@@ -13,5 +13,4 @@ import rx.Observable;
 public interface WeatherService {
     @GET("weather")
     Observable<CurrentWeatherData> getCurrentWeatherData(@Query("q") String city, @Query("appId") String apiKey);
-//    Observable<String> getCurrentWeatherData(@Query("q") String city, @Query("appId") String apiKey);
 }
